@@ -1,7 +1,7 @@
 alembic==1.13.1
 azure-common==1.1.28
 pyopenssl==24.0.0
-azure-storage-blob==12.19.0
+azure-storage-blob==2.1.0
 certifi==2024.2.2
 cffi==1.16.0
 chardet==5.2.0
@@ -10,7 +10,7 @@ cryptography==41.0.5
 Flask==3.0.2
 Flask-Login==0.6.3
 Flask-Session==0.6.0
-Flask-SQLAlchemy==3.1.
+Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.1
 idna==3.6
 itsdangerous==2.1.2
