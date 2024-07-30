@@ -4,7 +4,7 @@ Routes and views for the flask application.
 
 from datetime import datetime
 from flask import render_template, flash, redirect, request, session, url_for
-from werkzeug.urls import url_parse
+from urllib.parse import urlparse
 from config import Config
 from FlaskWebProject import app, db
 from FlaskWebProject.forms import LoginForm, PostForm
@@ -61,29 +61,31 @@ def post(id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        app.logger.debug('User is already authenticated')
         return redirect(url_for('home'))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user is None or not user.check_password(form.password.data):
+            app.logger.error('Invalid username or password')
             flash('Invalid username or password')
-            app.logger.error('Authentication error')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
-        app.logger.info('Successful login: ' + user.username)
+        app.logger.info(f'Successful login: {user.username}')
         next_page = request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':
+        if not next_page or urlparse(next_page).netloc != '':
             next_page = url_for('home')
         return redirect(next_page)
     session["state"] = str(uuid.uuid4())
     auth_url = _build_auth_url(scopes=Config.SCOPE, state=session["state"])
+    app.logger.debug(f'Generated auth URL: {auth_url}')
     return render_template('login.html', title='Sign In', form=form, auth_url=auth_url)
 
-@app.route(Config.REDIRECT_PATH)  # Its absolute URL must match your app's redirect_uri set in AAD
+@app.route(Config.REDIRECT_PATH)
 def authorized():
     if request.args.get('state') != session.get("state"):
-        return redirect(url_for("home"))  # No-OP. Goes back to Index page
-    if "error" in request.args:  # Authentication/Authorization failure
+        return redirect(url_for("home"))
+    if "error" in request.args:
         return render_template("auth_error.html", result=request.args)
     if request.args.get('code'):
         cache = _load_cache()
@@ -95,8 +97,6 @@ def authorized():
             return render_template("auth_error.html", result=result)
         session["user"] = result.get("id_token_claims")
         app.logger.info('Successful login')
-        # Note: In a real app, we'd use the 'name' property from session["user"] below
-        # Here, we'll use the admin username for anyone who is authenticated by MS
         user = User.query.filter_by(username="admin").first()
         login_user(user)
         _save_cache(cache)
